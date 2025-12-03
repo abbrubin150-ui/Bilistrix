@@ -34,12 +34,12 @@ npm run test:coverage
 
 ### Current Status
 
-**Total Tests**: 108 passing
-**Test Files**: 2
+**Total Tests**: 145 passing
+**Test Files**: 3
 **Coverage Areas**:
 - ✅ Utils (nodeHelpers.ts) - 63 tests
 - ✅ Store (useStore.ts) - 45 tests
-- ⏳ Hooks (useKeyboardNav.ts) - Planned
+- ✅ Hooks (useKeyboardNav.ts) - 37 tests
 - ⏳ Components (ListItem.tsx, ListView.tsx) - Planned
 
 ### Priority 1: Core Business Logic (Completed)
@@ -191,16 +191,60 @@ Comprehensive coverage of Zustand store operations:
   - Toggle state
   - Close action
 
-### Priority 2: Hooks & Components (Planned)
+### Priority 2: Hooks & Components (In Progress)
 
-#### hooks/useKeyboardNav.ts
+#### hooks/useKeyboardNav.ts (37 tests) ✅ COMPLETE
 
-Planned test areas:
-- Arrow key navigation (up/down)
-- Tab/Shift+Tab level changes
-- Ctrl/Cmd+Arrow for moving nodes
-- Keyboard shortcuts (Ctrl+K, Ctrl+Z/Y)
-- Event handling edge cases
+Comprehensive coverage for keyboard navigation:
+
+- **Setup and Cleanup** (2 tests)
+  - Event listener registration
+  - Event listener cleanup on unmount
+
+- **Input Field Protection** (2 tests)
+  - Keys ignored in input fields
+  - Keys ignored in textareas
+
+- **Arrow Navigation** (13 tests)
+  - ArrowDown: Select first root, navigate to children, skip collapsed, navigate siblings, climb to ancestor siblings
+  - ArrowUp: Navigate to previous sibling, previous sibling's last descendant, parent
+  - ArrowRight: Navigate to first child when expanded, do nothing when collapsed/no children
+  - ArrowLeft: Navigate to parent, do nothing for root nodes
+
+- **Space - Toggle Collapse** (1 test)
+  - Toggle collapse state
+
+- **Enter - Create Sibling** (2 tests)
+  - Create sibling at same level
+  - Select newly created sibling
+
+- **Shift+Enter - Create Child** (3 tests)
+  - Create child node
+  - Enforce max depth (level 5)
+  - Select newly created child
+
+- **Delete/Backspace - Delete Node** (5 tests)
+  - Delete with Delete key
+  - Delete with Backspace key
+  - Select next sibling after deletion
+  - Select previous sibling when deleting last
+  - Select parent when deleting only child
+
+- **Tab - Indent** (2 tests)
+  - Indent by making child of previous sibling
+  - Do nothing for first sibling
+
+- **Shift+Tab - Outdent** (2 tests)
+  - Outdent to grandparent
+  - Do nothing for root nodes
+
+- **Escape** (2 tests)
+  - Clear selection when no focus mode
+  - Exit focus mode when focused
+
+- **Ctrl+A / Cmd+A** (2 tests)
+  - Select all with Ctrl+A (Windows/Linux)
+  - Select all with Cmd+A (Mac)
 
 #### components/core/ListItem.tsx
 
@@ -238,7 +282,7 @@ src/
 ├── store/__tests__/
 │   └── useStore.test.ts             ✅ 45 tests
 ├── hooks/__tests__/
-│   └── useKeyboardNav.test.ts       ⏳ Planned
+│   └── useKeyboardNav.test.ts       ✅ 37 tests
 └── components/
     ├── core/__tests__/
     │   ├── ListItem.test.tsx        ⏳ Planned
@@ -343,9 +387,9 @@ This command:
 |----------|---------|--------|
 | Utils | 100% | 100% |
 | Store | ~80% | 90%+ |
-| Hooks | 0% | 85%+ |
+| Hooks | ~95% | 85%+ |
 | Components | 0% | 80%+ |
-| **Overall** | **~40%** | **80%+** |
+| **Overall** | **~60%** | **80%+** |
 
 ## Known Limitations
 
