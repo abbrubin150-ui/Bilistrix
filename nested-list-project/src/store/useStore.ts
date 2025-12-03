@@ -56,6 +56,248 @@ const initialState: AppState = {
   },
 };
 
+const clampLevel = (level: number): number => {
+  if (!Number.isFinite(level)) return 0;
+  return Math.min(APP_CONFIG.MAX_DEPTH - 1, Math.max(0, Math.trunc(level)));
+};
+
+const sanitizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+};
+
+const sanitizeTheme = (value: unknown) => {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).name === 'string' &&
+    (value as any).colors &&
+    typeof (value as any).colors === 'object'
+  ) {
+    const colors = (value as any).colors;
+    if (
+      typeof colors.primary === 'string' &&
+      typeof colors.background === 'string' &&
+      typeof colors.text === 'string' &&
+      typeof colors.border === 'string' &&
+      Array.isArray(colors.levelColors)
+    ) {
+      return value as SandboxSession['theme'];
+    }
+  }
+  return DEFAULT_DARK_THEME;
+};
+
+const sanitizeShortcuts = (value: unknown) => {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).name === 'string' &&
+    (value as any).shortcuts &&
+    typeof (value as any).shortcuts === 'object'
+  ) {
+    return value as SandboxSession['shortcutsProfile'];
+  }
+  return DEFAULT_SHORTCUTS;
+};
+
+const sanitizeNode = (raw: any): ListNode => {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid node format');
+  }
+
+  const now = Date.now();
+  const id = typeof raw.id === 'string' ? raw.id : generateId();
+  const level = clampLevel(typeof raw.level === 'number' ? raw.level : 0);
+
+  return {
+    id,
+    parentId: typeof raw.parentId === 'string' ? raw.parentId : null,
+    childrenIds: sanitizeStringArray(raw.childrenIds),
+    title: typeof raw.title === 'string' ? raw.title : '',
+    description: typeof raw.description === 'string' ? raw.description : undefined,
+    level,
+    colorSlot:
+      typeof raw.colorSlot === 'number' && Number.isFinite(raw.colorSlot)
+        ? raw.colorSlot
+        : undefined,
+    icon: typeof raw.icon === 'string' ? raw.icon : undefined,
+    isCollapsed: typeof raw.isCollapsed === 'boolean' ? raw.isCollapsed : false,
+    isDone: typeof raw.isDone === 'boolean' ? raw.isDone : undefined,
+    isPinned: typeof raw.isPinned === 'boolean' ? raw.isPinned : undefined,
+    isHighlighted:
+      typeof raw.isHighlighted === 'boolean' ? raw.isHighlighted : undefined,
+    sandboxProps:
+      raw.sandboxProps && typeof raw.sandboxProps === 'object'
+        ? (raw.sandboxProps as Record<string, any>)
+        : undefined,
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : now,
+    updatedAt:
+      typeof raw.updatedAt === 'number'
+        ? raw.updatedAt
+        : typeof raw.createdAt === 'number'
+        ? raw.createdAt
+        : now,
+  };
+};
+
+const sanitizeNodesMap = (value: unknown): Record<ListNodeId, ListNode> => {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== 'object') {
+    throw new Error('Nodes must be an object');
+  }
+
+  const nodes: Record<ListNodeId, ListNode> = {};
+  Object.entries(value as Record<string, any>).forEach(([key, nodeValue]) => {
+    const node = sanitizeNode({ id: key, ...nodeValue });
+    nodes[node.id] = node;
+  });
+
+  return nodes;
+};
+
+const sanitizeSession = (
+  value: unknown,
+  nodes: Record<ListNodeId, ListNode>
+): SandboxSession => {
+  const base = createInitialSession();
+  if (!value || typeof value !== 'object') return base;
+
+  const selectedNodeIds = sanitizeStringArray((value as any).selectedNodeIds).filter(
+    (id) => !!nodes[id]
+  );
+
+  return {
+    ...base,
+    id: typeof (value as any).id === 'string' ? (value as any).id : base.id,
+    name:
+      typeof (value as any).name === 'string' ? (value as any).name : base.name,
+    description:
+      typeof (value as any).description === 'string'
+        ? (value as any).description
+        : base.description,
+    viewMode:
+      typeof (value as any).viewMode === 'string'
+        ? ((value as any).viewMode as typeof base.viewMode)
+        : base.viewMode,
+    rtl: typeof (value as any).rtl === 'boolean' ? (value as any).rtl : base.rtl,
+    rules: Array.isArray((value as any).rules)
+      ? ((value as any).rules as SandboxSession['rules'])
+      : base.rules,
+    focusedNodeId:
+      typeof (value as any).focusedNodeId === 'string'
+        ? (value as any).focusedNodeId
+        : undefined,
+    selectedNodeIds,
+    focusPath: sanitizeStringArray((value as any).focusPath),
+    theme: sanitizeTheme((value as any).theme),
+    shortcutsProfile: sanitizeShortcuts((value as any).shortcutsProfile),
+    historyEnabled:
+      typeof (value as any).historyEnabled === 'boolean'
+        ? (value as any).historyEnabled
+        : true,
+    createdAt:
+      typeof (value as any).createdAt === 'number'
+        ? (value as any).createdAt
+        : base.createdAt,
+    updatedAt:
+      typeof (value as any).updatedAt === 'number'
+        ? (value as any).updatedAt
+        : base.updatedAt,
+  };
+};
+
+const sanitizeTemplates = (value: unknown): Record<string, Template> => {
+  if (!value || typeof value !== 'object') return {};
+  const templates: Record<string, Template> = {};
+  Object.entries(value as Record<string, any>).forEach(([key, templateValue]) => {
+    if (!templateValue || typeof templateValue !== 'object') return;
+    const now = Date.now();
+    const id = typeof templateValue.id === 'string' ? templateValue.id : key;
+    if (typeof id !== 'string' || typeof templateValue.rootNodeId !== 'string') return;
+
+    templates[id] = {
+      id,
+      name: typeof templateValue.name === 'string' ? templateValue.name : 'Template',
+      description:
+        typeof templateValue.description === 'string'
+          ? templateValue.description
+          : undefined,
+      rootNodeId: templateValue.rootNodeId,
+      tags: sanitizeStringArray(templateValue.tags),
+      createdAt:
+        typeof templateValue.createdAt === 'number' ? templateValue.createdAt : now,
+    };
+  });
+  return templates;
+};
+
+const sanitizeSnapshots = (value: unknown): Record<string, Snapshot> => {
+  if (!value || typeof value !== 'object') return {};
+  const snapshots: Record<string, Snapshot> = {};
+
+  Object.entries(value as Record<string, any>).forEach(([key, snapshotValue]) => {
+    if (!snapshotValue || typeof snapshotValue !== 'object') return;
+    const now = Date.now();
+    const id = typeof (snapshotValue as any).id === 'string' ? (snapshotValue as any).id : key;
+    const sessionId = (snapshotValue as any).sessionId;
+
+    if (typeof id !== 'string' || typeof sessionId !== 'string') return;
+
+    const nodes = sanitizeNodesMap((snapshotValue as any).nodes);
+    const rootNodeIds = sanitizeStringArray((snapshotValue as any).rootNodeIds).filter(
+      (rid) => !!nodes[rid]
+    );
+
+    snapshots[id] = {
+      id,
+      name:
+        typeof (snapshotValue as any).name === 'string'
+          ? (snapshotValue as any).name
+          : 'Snapshot',
+      description:
+        typeof (snapshotValue as any).description === 'string'
+          ? (snapshotValue as any).description
+          : undefined,
+      sessionId,
+      nodes,
+      rootNodeIds,
+      createdAt:
+        typeof (snapshotValue as any).createdAt === 'number'
+          ? (snapshotValue as any).createdAt
+          : now,
+    };
+  });
+
+  return snapshots;
+};
+
+const parseImportData = (jsonData: string) => {
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonData);
+  } catch (error) {
+    throw new Error('Invalid JSON format');
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Imported data must be an object');
+  }
+
+  const nodes = sanitizeNodesMap(parsed.nodes);
+  if (parsed.rootNodeIds !== undefined && !Array.isArray(parsed.rootNodeIds)) {
+    throw new Error('rootNodeIds must be an array');
+  }
+  const rootNodeIds = sanitizeStringArray(parsed.rootNodeIds).filter((id) => !!nodes[id]);
+  const session = sanitizeSession(parsed.session, nodes);
+  const templates = sanitizeTemplates(parsed.templates);
+  const snapshots = sanitizeSnapshots(parsed.snapshots);
+
+  return { nodes, rootNodeIds, session, templates, snapshots };
+};
+
 /**
  * Store actions interface
  */
@@ -689,21 +931,27 @@ export const useStore = create<AppState & StoreActions>()(
     },
 
     importData: (jsonData) => {
+      const rtl = get().currentSession.rtl;
       try {
-        const data = JSON.parse(jsonData);
+        const parsed = parseImportData(jsonData);
         set((draft) => {
-          if (data.nodes) draft.nodes = data.nodes;
-          if (data.rootNodeIds) draft.rootNodeIds = data.rootNodeIds;
-          if (data.session) draft.currentSession = data.session;
-          if (data.templates) draft.templates = data.templates;
-          if (data.snapshots) draft.snapshots = data.snapshots;
+          draft.nodes = parsed.nodes;
+          draft.rootNodeIds = parsed.rootNodeIds;
+          draft.currentSession = parsed.session;
+          draft.templates = parsed.templates;
+          draft.snapshots = parsed.snapshots;
         });
         get().saveHistory();
       } catch (error) {
         console.error('Failed to import data:', error);
-        const rtl = get().currentSession.rtl;
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : 'Failed to import data';
         useToastStore.getState().addToast(
-          rtl ? 'ייבוא נתונים נכשל' : 'Failed to import data.',
+          rtl
+            ? `ייבוא נתונים נכשל: ${message}`
+            : `Import failed: ${message}`,
           'error'
         );
         throw error instanceof Error ? error : new Error('Import failed');

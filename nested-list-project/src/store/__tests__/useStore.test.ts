@@ -3,6 +3,7 @@ import { useStore } from '../useStore';
 import { useToastStore } from '../useToastStore';
 import { ListNode, ViewMode } from '../../types/core';
 import { act, renderHook } from '@testing-library/react';
+import { DEFAULT_DARK_THEME } from '../../constants/themes';
 
 describe('useStore', () => {
   beforeEach(() => {
@@ -467,6 +468,80 @@ describe('useStore', () => {
         expect(rootIds[2]).toBe(node2Id);
         // Duplicate should be at index 1
       });
+    });
+  });
+
+  describe('importData validation', () => {
+    it('should import valid payloads and normalize root ids', () => {
+      const { result } = renderHook(() => useStore());
+
+      const payload = JSON.stringify({
+        nodes: {
+          root1: {
+            id: 'root1',
+            parentId: null,
+            title: 'Root',
+            level: 0,
+            childrenIds: [],
+            isCollapsed: false,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        },
+        rootNodeIds: ['root1', 'missing'],
+        session: { id: 'session-1', name: 'Test Session', selectedNodeIds: ['root1'] },
+      });
+
+      act(() => {
+        result.current.importData(payload);
+      });
+
+      expect(result.current.rootNodeIds).toEqual(['root1']);
+      expect(result.current.nodes['root1'].title).toBe('Root');
+      expect(result.current.currentSession.id).toBe('session-1');
+      expect(result.current.currentSession.selectedNodeIds).toEqual(['root1']);
+    });
+
+    it('should apply defaults for missing fields', () => {
+      const { result } = renderHook(() => useStore());
+
+      const payload = JSON.stringify({
+        nodes: {
+          lone: {
+            id: 'lone',
+            parentId: null,
+            title: 'Lone',
+          },
+        },
+        rootNodeIds: ['lone'],
+        session: { name: 'Partial Session' },
+      });
+
+      act(() => {
+        result.current.importData(payload);
+      });
+
+      expect(result.current.nodes['lone'].childrenIds).toEqual([]);
+      expect(result.current.nodes['lone'].level).toBe(0);
+      expect(result.current.nodes['lone'].isCollapsed).toBe(false);
+      expect(result.current.currentSession.historyEnabled).toBe(true);
+      expect(result.current.currentSession.theme).toEqual(DEFAULT_DARK_THEME);
+    });
+
+    it('should reject corrupted data and preserve state', () => {
+      const { result } = renderHook(() => useStore());
+      const initialRootCount = result.current.rootNodeIds.length;
+
+      expect(() => {
+        act(() => {
+          result.current.importData(
+            JSON.stringify({ nodes: 'not-a-node', rootNodeIds: ['x'] })
+          );
+        });
+      }).toThrow();
+
+      expect(result.current.rootNodeIds.length).toBe(initialRootCount);
+      expect(useToastStore.getState().toasts.some((toast) => toast.type === 'error')).toBe(true);
     });
   });
 

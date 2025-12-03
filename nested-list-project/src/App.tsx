@@ -34,8 +34,12 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to load saved data:', error);
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Failed to load saved data from storage.';
       addToast(
-        rtl ? 'טעינת נתונים שמורים נכשלה' : 'Failed to load saved data from storage.',
+        rtl ? `טעינת נתונים שמורים נכשלה: ${message}` : message,
         'error'
       );
     }
@@ -104,10 +108,13 @@ function App() {
               importData(data);
             } catch (error) {
               console.error('Import failed:', error);
-              addToast(
-                rtl ? 'ייבוא נכשל' : 'Import failed. Please check the file.',
-                'error'
-              );
+              const message =
+                error instanceof Error && error.message
+                  ? error.message
+                  : rtl
+                  ? 'ייבוא נכשל'
+                  : 'Import failed. Please check the file.';
+              addToast(message, 'error');
             }
           }
         };
