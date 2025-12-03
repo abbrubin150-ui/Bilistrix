@@ -20,6 +20,7 @@ import {
 import { DEFAULT_DARK_THEME } from '../constants/themes';
 import { DEFAULT_SHORTCUTS } from '../constants/shortcuts';
 import { APP_CONFIG } from '../constants/config';
+import { useToastStore } from './useToastStore';
 
 /**
  * Initial state
@@ -664,17 +665,27 @@ export const useStore = create<AppState & StoreActions>()(
     // Import/Export
     exportData: () => {
       const state = get();
-      return JSON.stringify(
-        {
-          nodes: state.nodes,
-          rootNodeIds: state.rootNodeIds,
-          session: state.currentSession,
-          templates: state.templates,
-          snapshots: state.snapshots,
-        },
-        null,
-        2
-      );
+      try {
+        return JSON.stringify(
+          {
+            nodes: state.nodes,
+            rootNodeIds: state.rootNodeIds,
+            session: state.currentSession,
+            templates: state.templates,
+            snapshots: state.snapshots,
+          },
+          null,
+          2
+        );
+      } catch (error) {
+        console.error('Failed to export data:', error);
+        const rtl = state.currentSession.rtl;
+        useToastStore.getState().addToast(
+          rtl ? 'ייצוא נתונים נכשל' : 'Failed to export data.',
+          'error'
+        );
+        throw error instanceof Error ? error : new Error('Export failed');
+      }
     },
 
     importData: (jsonData) => {
@@ -690,6 +701,12 @@ export const useStore = create<AppState & StoreActions>()(
         get().saveHistory();
       } catch (error) {
         console.error('Failed to import data:', error);
+        const rtl = get().currentSession.rtl;
+        useToastStore.getState().addToast(
+          rtl ? 'ייבוא נתונים נכשל' : 'Failed to import data.',
+          'error'
+        );
+        throw error instanceof Error ? error : new Error('Import failed');
       }
     },
 
