@@ -32,6 +32,4 @@ lerna-debug.log*
 .env.production.local
 
 # Package manager lock files
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+# Allow tracking lockfiles for reproducible installs
