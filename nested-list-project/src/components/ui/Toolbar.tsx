@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { VIEW_MODE_LABELS } from '../../constants/config';
 import { ViewMode } from '../../types/core';
+import { RulesEngine } from './RulesEngine';
+import { PluginsManager } from './PluginsManager';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 export const Toolbar: React.FC = () => {
   const createNode = useStore((state) => state.createNode);
@@ -20,6 +23,10 @@ export const Toolbar: React.FC = () => {
   const theme = useStore((state) => state.currentSession.theme);
   const historyPast = useStore((state) => state.history.past);
   const historyFuture = useStore((state) => state.history.future);
+
+  const [showRulesEngine, setShowRulesEngine] = useState(false);
+  const [showPluginsManager, setShowPluginsManager] = useState(false);
+  const [showThemeSwitcher, setShowThemeSwitcher] = useState(false);
 
   const handleAddRoot = () => {
     const newNode = createNode(null);
@@ -239,6 +246,71 @@ export const Toolbar: React.FC = () => {
       >
         📸 {rtl ? 'Snapshot' : 'Snapshot'}
       </button>
+
+      {/* Divider */}
+      <div
+        style={{
+          width: '2px',
+          background: theme.colors.border,
+          margin: '0 8px',
+        }}
+      />
+
+      {/* Theme Switcher */}
+      <button
+        onClick={() => setShowThemeSwitcher(true)}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+          background: 'rgba(255,255,255,0.1)',
+          color: theme.colors.text,
+          fontSize: '14px',
+          cursor: 'pointer',
+        }}
+        title={rtl ? 'החלף ערכת נושא' : 'Change theme'}
+      >
+        🎨 {rtl ? 'ערכת נושא' : 'Theme'}
+      </button>
+
+      {/* Rules Engine */}
+      <button
+        onClick={() => setShowRulesEngine(true)}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+          background: 'rgba(255,255,255,0.1)',
+          color: theme.colors.text,
+          fontSize: '14px',
+          cursor: 'pointer',
+        }}
+        title={rtl ? 'מנגנון חוקים' : 'Rules engine'}
+      >
+        ⚙️ {rtl ? 'חוקים' : 'Rules'}
+      </button>
+
+      {/* Plugins Manager */}
+      <button
+        onClick={() => setShowPluginsManager(true)}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+          background: 'rgba(255,255,255,0.1)',
+          color: theme.colors.text,
+          fontSize: '14px',
+          cursor: 'pointer',
+        }}
+        title={rtl ? 'מנהל תוספים' : 'Plugins manager'}
+      >
+        🧩 {rtl ? 'תוספים' : 'Plugins'}
+      </button>
+
+      {/* Modals */}
+      {showRulesEngine && <RulesEngine onClose={() => setShowRulesEngine(false)} />}
+      {showPluginsManager && <PluginsManager onClose={() => setShowPluginsManager(false)} />}
+      {showThemeSwitcher && <ThemeSwitcher onClose={() => setShowThemeSwitcher(false)} />}
     </div>
   );
 };

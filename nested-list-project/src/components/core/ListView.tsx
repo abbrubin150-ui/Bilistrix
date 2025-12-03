@@ -2,6 +2,10 @@ import React, { useMemo } from 'react';
 import { ListItem } from './ListItem';
 import { useStore } from '../../store/useStore';
 import { ListNode } from '../../types/core';
+import { BoardView } from '../views/BoardView';
+import { TreeView } from '../views/TreeView';
+import { TimelineView } from '../views/TimelineView';
+import { MinimalView } from '../views/MinimalView';
 
 export const ListView: React.FC = () => {
   const nodes = useStore((state) => state.nodes);
@@ -11,6 +15,7 @@ export const ListView: React.FC = () => {
   const filterConfig = useStore((state) => state.filterConfig);
   const rtl = useStore((state) => state.currentSession.rtl);
   const theme = useStore((state) => state.currentSession.theme);
+  const viewMode = useStore((state) => state.currentSession.viewMode);
 
   // Apply filters
   const filteredNodeIds = useMemo(() => {
@@ -94,33 +99,50 @@ export const ListView: React.FC = () => {
     ? displayRootIds.filter((id) => filteredNodeIds.has(id))
     : displayRootIds;
 
-  return (
-    <div style={{ direction: rtl ? 'rtl' : 'ltr' }}>
-      {filteredNodeIds && (
-        <div
-          style={{
-            padding: '12px 16px',
-            marginBottom: '16px',
-            borderRadius: '8px',
-            background: `${theme.colors.primary}20`,
-            border: `1px solid ${theme.colors.primary}`,
-            color: theme.colors.text,
-            fontSize: '14px',
-          }}
-        >
-          🔍 {rtl ? 'מוצגים' : 'Showing'} {filteredNodeIds.size}{' '}
-          {rtl ? 'פריטים' : 'items'}
-        </div>
-      )}
+  // Render different views based on viewMode
+  const renderView = () => {
+    switch (viewMode) {
+      case 'board':
+        return <BoardView />;
+      case 'tree':
+        return <TreeView />;
+      case 'timeline':
+        return <TimelineView />;
+      case 'minimal':
+        return <MinimalView />;
+      case 'outline':
+      default:
+        return (
+          <div style={{ direction: rtl ? 'rtl' : 'ltr' }}>
+            {filteredNodeIds && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  borderRadius: '8px',
+                  background: `${theme.colors.primary}20`,
+                  border: `1px solid ${theme.colors.primary}`,
+                  color: theme.colors.text,
+                  fontSize: '14px',
+                }}
+              >
+                🔍 {rtl ? 'מוצגים' : 'Showing'} {filteredNodeIds.size}{' '}
+                {rtl ? 'פריטים' : 'items'}
+              </div>
+            )}
 
-      {visibleRootIds.map((nodeId) => (
-        <ListItem
-          key={nodeId}
-          nodeId={nodeId}
-          isSelected={selectedNodeIds.includes(nodeId)}
-          filteredNodeIds={filteredNodeIds}
-        />
-      ))}
-    </div>
-  );
+            {visibleRootIds.map((nodeId) => (
+              <ListItem
+                key={nodeId}
+                nodeId={nodeId}
+                isSelected={selectedNodeIds.includes(nodeId)}
+                filteredNodeIds={filteredNodeIds}
+              />
+            ))}
+          </div>
+        );
+    }
+  };
+
+  return <>{renderView()}</>;
 };
