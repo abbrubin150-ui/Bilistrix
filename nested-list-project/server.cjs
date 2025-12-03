@@ -7,7 +7,7 @@ const indexHtml = path.join(distPath, 'index.html');
 
 app.use(express.static(distPath));
 
-app.get('*', (_req, res) => {
+app.get(/^\/.*/, (_req, res) => {
   res.sendFile(indexHtml);
 });
 
