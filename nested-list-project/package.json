@@ -7,12 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "serve:dist": "node server.cjs",
+    "package:win": "npm run build && pkg server.cjs --targets node18-win-x64 --output dist/nested-list-app.exe",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "express": "^4.19.2",
     "immer": "^10.0.3",
     "react": "^18.2.0",
     "react-dnd": "^16.0.1",
@@ -30,8 +33,14 @@
     "@vitest/ui": "^4.0.15",
     "happy-dom": "^20.0.11",
     "jsdom": "^27.2.0",
+    "pkg": "^5.8.1",
     "typescript": "^5.3.3",
     "vite": "^5.4.2",
     "vitest": "^4.0.15"
+  },
+  "pkg": {
+    "assets": [
+      "dist/**/*"
+    ]
   }
 }
