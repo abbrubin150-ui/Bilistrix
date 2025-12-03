@@ -19,6 +19,7 @@ export const ListItem: React.FC<ListItemProps> = ({
   filteredNodeIds = null,
 }) => {
   const node = useStore((state) => state.nodes[nodeId]);
+  const nodes = useStore((state) => state.nodes);
   const updateNode = useStore((state) => state.updateNode);
   const deleteNode = useStore((state) => state.deleteNode);
   const createNode = useStore((state) => state.createNode);
@@ -148,6 +149,33 @@ export const ListItem: React.FC<ListItemProps> = ({
   const levelColor = theme.colors.levelColors[node.level] || theme.colors.primary;
   const hasChildren = node.childrenIds.length > 0;
   const canNest = node.level < 5;
+  const completedChildren = node.childrenIds.filter((childId) => nodes[childId]?.isDone).length;
+
+  const chipStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 10px',
+    borderRadius: '999px',
+    background: `${levelColor}20`,
+    border: `1px solid ${levelColor}50`,
+    fontSize: '12px',
+    color: theme.colors.text,
+  } as const;
+
+  const actionButtonBase = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: `${theme.colors.primary}15`,
+    border: `1px solid ${theme.colors.primary}40`,
+    borderRadius: '6px',
+    padding: '6px 10px',
+    cursor: 'pointer',
+    color: theme.colors.text,
+    fontSize: '13px',
+    transition: 'transform 0.15s ease, box-shadow 0.2s',
+  } as const;
 
   return (
     <div
@@ -161,10 +189,11 @@ export const ListItem: React.FC<ListItemProps> = ({
       }${hasChildren ? ` (${node.childrenIds.length} ${rtl ? 'תתי-פריטים' : 'children'})` : ''}`}
       tabIndex={0}
       style={{
-        marginBottom: '8px',
+        marginBottom: '10px',
         opacity: isDragging ? 0.5 : 1,
-        transition: 'opacity 0.2s',
+        transition: 'transform 0.2s ease, opacity 0.2s ease',
         cursor: isDragging ? 'grabbing' : 'grab',
+        position: 'relative',
       }}
       data-node-id={nodeId}
     >
@@ -175,13 +204,13 @@ export const ListItem: React.FC<ListItemProps> = ({
         aria-describedby={node.description ? `desc-${nodeId}` : undefined}
         style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: rtl ? '12px' : '12px',
-          padding: '12px 16px',
-          borderRadius: '8px',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '14px 16px',
+          borderRadius: '12px',
           background: isSelected
-            ? `linear-gradient(135deg, ${levelColor}40, ${levelColor}20)`
-            : `${levelColor}15`,
+            ? `linear-gradient(135deg, ${levelColor}45, ${levelColor}20)`
+            : `${levelColor}12`,
           border: `2px solid ${
             isOver && canDrop
               ? '#4ade80'
@@ -193,13 +222,30 @@ export const ListItem: React.FC<ListItemProps> = ({
           transition: 'all 0.2s ease',
           direction: rtl ? 'rtl' : 'ltr',
           boxShadow: isSelected
-            ? `0 4px 12px ${levelColor}40`
+            ? `0 6px 16px ${levelColor}40`
             : isOver && canDrop
-            ? '0 4px 12px rgba(74, 222, 128, 0.4)'
-            : '0 2px 6px rgba(0,0,0,0.1)',
-          transform: isOver && canDrop ? 'scale(1.02)' : 'scale(1)',
+            ? '0 6px 14px rgba(74, 222, 128, 0.35)'
+            : '0 3px 10px rgba(0,0,0,0.08)',
+          transform: isOver && canDrop ? 'translateY(-2px)' : 'translateY(0)',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: '-10px',
+            bottom: '-10px',
+            [rtl ? 'right' : 'left']: '-6px',
+            width: '10px',
+            background: `linear-gradient(180deg, ${levelColor}80, ${levelColor}20)`,
+            opacity: 0.9,
+            filter: 'blur(0.3px)',
+          }}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {/* Collapse button */}
         {hasChildren && (
           <button
@@ -283,7 +329,7 @@ export const ListItem: React.FC<ListItemProps> = ({
               padding: '8px 12px',
               borderRadius: '6px',
               border: `1px solid ${levelColor}`,
-              background: 'rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.08)',
               color: theme.colors.text,
               fontSize: '15px',
               direction: rtl ? 'rtl' : 'ltr',
@@ -296,7 +342,7 @@ export const ListItem: React.FC<ListItemProps> = ({
               flex: 1,
               color: theme.colors.text,
               fontSize: '15px',
-              fontWeight: node.level === 0 ? '600' : '400',
+              fontWeight: node.level === 0 ? '700' : '500',
               textDecoration: node.isDone ? 'line-through' : 'none',
               opacity: node.isDone ? 0.6 : 1,
             }}
@@ -305,21 +351,71 @@ export const ListItem: React.FC<ListItemProps> = ({
           </span>
         )}
 
-        {/* Pin indicator */}
-        {node.isPinned && (
-          <span style={{ fontSize: '14px' }} title={rtl ? 'נעוץ' : 'Pinned'}>
-            📌
-          </span>
-        )}
+        </div>
 
-        {/* Actions */}
         <div
           style={{
             display: 'flex',
-            gap: '6px',
-            opacity: isSelected ? 1 : 0.6,
+            flexWrap: 'wrap',
+            gap: '8px',
+            alignItems: 'center',
+            color: theme.colors.text,
           }}
         >
+          <span style={chipStyle}>{rtl ? 'רמה' : 'Level'} {node.level + 1}</span>
+          {node.isPinned && (
+            <span style={chipStyle}>
+              📌 {rtl ? 'נעוץ' : 'Pinned'}
+            </span>
+          )}
+          {node.isDone && (
+            <span style={chipStyle}>
+              ✅ {rtl ? 'הושלם' : 'Done'}
+            </span>
+          )}
+          {hasChildren && (
+            <span style={chipStyle}>
+              👶 {rtl ? 'תתי פריטים:' : 'Children:'} {completedChildren}/{node.childrenIds.length}
+            </span>
+          )}
+        </div>
+
+        {node.description && !isEditing && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: '13px',
+              lineHeight: 1.5,
+              color: theme.colors.text,
+              opacity: 0.8,
+            }}
+          >
+            {node.description}
+          </p>
+        )}
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            justifyContent: rtl ? 'flex-start' : 'flex-end',
+            opacity: isSelected ? 1 : 0.75,
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+              setEditText(node.title);
+            }}
+            aria-label={rtl ? `ערוך את ${node.title}` : `Edit ${node.title}`}
+            title={rtl ? 'עריכה מהירה' : 'Quick edit'}
+            style={{ ...actionButtonBase, background: `${theme.colors.primary}12` }}
+          >
+            ✏️ {rtl ? 'עריכה' : 'Edit'}
+          </button>
+
           {canNest && (
             <button
               onClick={(e) => {
@@ -328,25 +424,9 @@ export const ListItem: React.FC<ListItemProps> = ({
               }}
               aria-label={rtl ? `הוסף תת-פריט ל${node.title}` : `Add child to ${node.title}`}
               title={rtl ? 'הוסף תת-פריט' : 'Add child'}
-              style={{
-                background: '#4ade80',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '4px 10px',
-                cursor: 'pointer',
-                color: '#1a1a2e',
-                fontWeight: 'bold',
-                fontSize: '16px',
-                transition: 'transform 0.2s',
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.transform = 'scale(1.1)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = 'scale(1)')
-              }
+              style={{ ...actionButtonBase, background: '#4ade8020', border: '1px solid #4ade80' }}
             >
-              +
+              ➕ {rtl ? 'תת-פריט' : 'Child'}
             </button>
           )}
 
@@ -357,22 +437,9 @@ export const ListItem: React.FC<ListItemProps> = ({
             }}
             aria-label={rtl ? `שכפל ${node.title}` : `Duplicate ${node.title}`}
             title={rtl ? 'שכפל' : 'Duplicate'}
-            style={{
-              background: '#3b82f6',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 10px',
-              cursor: 'pointer',
-              color: 'white',
-              fontSize: '14px',
-              transition: 'transform 0.2s',
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = 'scale(1.1)')
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            style={{ ...actionButtonBase }}
           >
-            ⎘
+            ⎘ {rtl ? 'שכפול' : 'Duplicate'}
           </button>
 
           <button
@@ -383,22 +450,13 @@ export const ListItem: React.FC<ListItemProps> = ({
             aria-label={rtl ? `מחק ${node.title}` : `Delete ${node.title}`}
             title={rtl ? 'מחק' : 'Delete'}
             style={{
-              background: '#ef4444',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 10px',
-              cursor: 'pointer',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              transition: 'transform 0.2s',
+              ...actionButtonBase,
+              background: '#ef444420',
+              border: '1px solid #ef4444',
+              color: '#fff',
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = 'scale(1.1)')
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            ✕
+            🗑️ {rtl ? 'מחק' : 'Delete'}
           </button>
         </div>
       </div>

@@ -73,6 +73,35 @@ export const ListView: React.FC = () => {
   // If in focus mode, show only focused subtree
   const displayRootIds = focusedNodeId ? [focusedNodeId] : rootNodeIds;
 
+  const totalItems = Object.keys(nodes).length;
+  const completedItems = Object.values(nodes).filter((node) => node.isDone).length;
+
+  const activeFilters: string[] = [];
+  if (filterConfig.searchText) {
+    activeFilters.push(rtl ? `חיפוש: "${filterConfig.searchText}"` : `Search: "${filterConfig.searchText}"`);
+  }
+  if (filterConfig.levels && filterConfig.levels.length > 0) {
+    activeFilters.push(
+      rtl
+        ? `רמות: ${filterConfig.levels.map((level) => level + 1).join(', ')}`
+        : `Levels: ${filterConfig.levels.map((level) => level + 1).join(', ')}`
+    );
+  }
+  if (filterConfig.isDone !== undefined) {
+    activeFilters.push(
+      rtl
+        ? filterConfig.isDone
+          ? 'מסומנים כהושלמו'
+          : 'לא מסומנים כהושלמו'
+        : filterConfig.isDone
+        ? 'Marked as done'
+        : 'Not marked as done'
+    );
+  }
+  if (focusedNodeId) {
+    activeFilters.push(rtl ? 'מצב מיקוד תת-עץ' : 'Focused subtree');
+  }
+
   if (displayRootIds.length === 0) {
     return (
       <div
@@ -113,7 +142,68 @@ export const ListView: React.FC = () => {
       case 'outline':
       default:
         return (
-          <div style={{ direction: rtl ? 'rtl' : 'ltr' }}>
+          <div style={{ direction: rtl ? 'rtl' : 'ltr', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div
+              aria-live="polite"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '12px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: `${theme.colors.primary}10`,
+                border: `1px solid ${theme.colors.primary}40`,
+                color: theme.colors.text,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                <span>📋</span>
+                <span>
+                  {rtl ? 'סה"כ פריטים' : 'Total items'}: {totalItems}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>✅</span>
+                <span>
+                  {rtl ? 'הושלמו' : 'Completed'}: {completedItems}
+                </span>
+              </div>
+            </div>
+
+            {activeFilters.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  background: `${theme.colors.primary}08`,
+                  border: `1px dashed ${theme.colors.primary}50`,
+                  color: theme.colors.text,
+                }}
+              >
+                {activeFilters.map((filter) => (
+                  <span
+                    key={filter}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 10px',
+                      borderRadius: '999px',
+                      background: `${theme.colors.primary}15`,
+                      border: `1px solid ${theme.colors.primary}40`,
+                      fontSize: '13px',
+                    }}
+                  >
+                    <span>🎯</span>
+                    <span>{filter}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
             {filteredNodeIds && (
               <div
                 style={{
