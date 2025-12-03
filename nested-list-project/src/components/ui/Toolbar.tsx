@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { useToastStore } from '../../store/useToastStore';
 import { VIEW_MODE_LABELS } from '../../constants/config';
 import { ViewMode } from '../../types/core';
 import { RulesEngine } from './RulesEngine';
@@ -23,6 +24,7 @@ export const Toolbar: React.FC = () => {
   const theme = useStore((state) => state.currentSession.theme);
   const historyPast = useStore((state) => state.history.past);
   const historyFuture = useStore((state) => state.history.future);
+  const addToast = useToastStore((state) => state.addToast);
 
   const [showRulesEngine, setShowRulesEngine] = useState(false);
   const [showPluginsManager, setShowPluginsManager] = useState(false);
@@ -34,14 +36,23 @@ export const Toolbar: React.FC = () => {
   };
 
   const handleExport = () => {
-    const data = exportData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nested-list-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const data = exportData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nested-list-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast(
+        rtl ? 'ייצוא הושלם בהצלחה' : 'Export completed successfully',
+        'success'
+      );
+    } catch (error) {
+      console.error('Export failed:', error);
+      addToast(rtl ? 'ייצוא נכשל' : 'Export failed. Please try again.', 'error');
+    }
   };
 
   const handleSnapshot = () => {

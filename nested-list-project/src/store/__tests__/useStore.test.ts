@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useStore } from '../useStore';
+import { useToastStore } from '../useToastStore';
 import { ListNode, ViewMode } from '../../types/core';
 import { act, renderHook } from '@testing-library/react';
 
@@ -9,6 +10,10 @@ describe('useStore', () => {
     const { result } = renderHook(() => useStore());
     act(() => {
       result.current.reset();
+    });
+
+    act(() => {
+      useToastStore.getState().clear();
     });
   });
 
@@ -993,6 +998,54 @@ describe('useStore', () => {
 
         expect(result.current.commandPaletteOpen).toBe(false);
       });
+    });
+  });
+
+  describe('Import/Export error handling', () => {
+    it('should surface export errors via toast', () => {
+      const addToastSpy = vi.spyOn(useToastStore.getState(), 'addToast');
+      const stringifySpy = vi.spyOn(JSON, 'stringify').mockImplementation(() => {
+        throw new Error('boom');
+      });
+
+      const { result } = renderHook(() => useStore());
+
+      expect(() => result.current.exportData()).toThrow();
+      const calls = addToastSpy.mock.calls;
+      expect(calls.some(([, type]) => type === 'error')).toBe(true);
+      expect(
+        calls.some(
+          ([message]) =>
+            typeof message === 'string' &&
+            (message.includes('Failed to export') || message.includes('ייצוא'))
+        )
+      ).toBe(true);
+
+      stringifySpy.mockRestore();
+      addToastSpy.mockRestore();
+    });
+
+    it('should surface import errors via toast', () => {
+      const addToastSpy = vi.spyOn(useToastStore.getState(), 'addToast');
+      const { result } = renderHook(() => useStore());
+
+      expect(() => {
+        act(() => {
+          result.current.importData('invalid-json');
+        });
+      }).toThrow();
+
+      const calls = addToastSpy.mock.calls;
+      expect(calls.some(([, type]) => type === 'error')).toBe(true);
+      expect(
+        calls.some(
+          ([message]) =>
+            typeof message === 'string' &&
+            (message.includes('Failed to import') || message.includes('ייבוא'))
+        )
+      ).toBe(true);
+
+      addToastSpy.mockRestore();
     });
   });
 });

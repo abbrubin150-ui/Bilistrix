@@ -5,7 +5,11 @@ import { SearchFilter } from './components/ui/SearchFilter';
 import { ListView } from './components/core/ListView';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SidePanel } from './components/ui/SidePanel';
+import { StatusBadge } from './components/ui/StatusBadge';
+import { ToastContainer } from './components/ui/Toast';
 import { useStore } from './store/useStore';
+import { useToastStore } from './store/useToastStore';
+import { useAutoSave } from './hooks/useAutoSave';
 import { useKeyboardNav } from './hooks/useKeyboardNav';
 import { APP_CONFIG } from './constants/config';
 
@@ -13,31 +17,29 @@ function App() {
   const theme = useStore((state) => state.currentSession.theme);
   const rtl = useStore((state) => state.currentSession.rtl);
   const importData = useStore((state) => state.importData);
+  const addToast = useToastStore((state) => state.addToast);
+  const toasts = useToastStore((state) => state.toasts);
+  const dismissToast = useToastStore((state) => state.dismissToast);
+  const { isSaving, lastSavedAt, hasPendingChanges } = useAutoSave();
 
   // Enable keyboard navigation
   useKeyboardNav();
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedData = localStorage.getItem(APP_CONFIG.STORAGE_KEY);
-    if (savedData) {
-      try {
+    try {
+      const savedData = localStorage.getItem(APP_CONFIG.STORAGE_KEY);
+      if (savedData) {
         importData(savedData);
-      } catch (error) {
-        console.error('Failed to load saved data:', error);
       }
+    } catch (error) {
+      console.error('Failed to load saved data:', error);
+      addToast(
+        rtl ? 'טעינת נתונים שמורים נכשלה' : 'Failed to load saved data from storage.',
+        'error'
+      );
     }
-  }, [importData]);
-
-  // Auto-save to localStorage
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const data = useStore.getState().exportData();
-      localStorage.setItem(APP_CONFIG.STORAGE_KEY, data);
-    }, APP_CONFIG.AUTO_SAVE_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, []);
+  }, [addToast, importData, rtl]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -59,14 +61,22 @@ function App() {
       // Export
       if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
         e.preventDefault();
-        const data = state.exportData();
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `nested-list-${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+          const data = state.exportData();
+          const blob = new Blob([data], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `nested-list-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Export failed:', error);
+          addToast(
+            rtl ? 'ייצוא נכשל' : 'Export failed. Please try again.',
+            'error'
+          );
+        }
       }
 
       // Focus mode exit
@@ -90,7 +100,15 @@ function App() {
         reader.onload = (event) => {
           const data = event.target?.result as string;
           if (data) {
-            importData(data);
+            try {
+              importData(data);
+            } catch (error) {
+              console.error('Import failed:', error);
+              addToast(
+                rtl ? 'ייבוא נכשל' : 'Import failed. Please check the file.',
+                'error'
+              );
+            }
           }
         };
         reader.readAsText(file);
@@ -108,7 +126,7 @@ function App() {
       window.removeEventListener('drop', handleDrop);
       window.removeEventListener('dragover', handleDragOver);
     };
-  }, [importData]);
+  }, [addToast, importData, rtl]);
 
   return (
     <div
@@ -123,6 +141,13 @@ function App() {
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <Header />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <StatusBadge
+            isSaving={isSaving}
+            hasPendingChanges={hasPendingChanges}
+            lastSavedAt={lastSavedAt}
+          />
+        </div>
         <Toolbar />
         <SearchFilter />
         <ListView />
@@ -130,6 +155,7 @@ function App() {
 
       <CommandPalette />
       <SidePanel />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} rtl={rtl} />
 
       {/* Footer */}
       <footer

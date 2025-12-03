@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { useToastStore } from '../../store/useToastStore';
 import { Modal } from './Modal';
-import { ToastContainer, ToastMessage } from './Toast';
 
 type PanelView = 'snapshots' | 'templates' | 'sessions' | 'themes';
 
@@ -19,7 +19,6 @@ export const SidePanel: React.FC = () => {
   >(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
   const [formState, setFormState] = useState({ name: '', description: '' });
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const snapshots = useStore((state) => Object.values(state.snapshots));
   const templates = useStore((state) => Object.values(state.templates));
@@ -28,6 +27,7 @@ export const SidePanel: React.FC = () => {
   const theme = useStore((state) => state.currentSession.theme);
   const rtl = useStore((state) => state.currentSession.rtl);
   const selectedNodeIds = useStore((state) => state.currentSession.selectedNodeIds);
+  const addToast = useToastStore((state) => state.addToast);
 
   const createSnapshot = useStore((state) => state.createSnapshot);
   const restoreSnapshot = useStore((state) => state.restoreSnapshot);
@@ -47,14 +47,6 @@ export const SidePanel: React.FC = () => {
     setModalType(null);
     setModalTargetId(null);
     setFormState({ name: '', description: '' });
-  };
-
-  const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
-    setToasts((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, message, type }]);
-  };
-
-  const dismissToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
   const formatDate = (timestamp: number) => {
@@ -790,8 +782,6 @@ export const SidePanel: React.FC = () => {
       >
         {modalContent}
       </Modal>
-
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} rtl={rtl} />
     </>
   );
 };
