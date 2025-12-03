@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useDrag, useDrop } from 'react-dnd';
 import { ListNode } from '../../types/core';
 import { useStore } from '../../store/useStore';
+
+const ITEM_TYPE = 'LIST_ITEM';
 
 interface ListItemProps {
   nodeId: string;
@@ -12,7 +15,7 @@ interface ListItemProps {
 export const ListItem: React.FC<ListItemProps> = ({
   nodeId,
   isSelected = false,
-  isDragging = false,
+  isDragging: isDraggingProp = false,
   filteredNodeIds = null,
 }) => {
   const node = useStore((state) => state.nodes[nodeId]);
@@ -23,12 +26,56 @@ export const ListItem: React.FC<ListItemProps> = ({
   const toggleDone = useStore((state) => state.toggleDone);
   const duplicateNode = useStore((state) => state.duplicateNode);
   const selectNode = useStore((state) => state.selectNode);
+  const moveNode = useStore((state) => state.moveNode);
   const theme = useStore((state) => state.currentSession.theme);
   const rtl = useStore((state) => state.currentSession.rtl);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const divRef = useRef<HTMLDivElement>(null);
+
+  // Drag source
+  const [{ isDragging }, drag] = useDrag({
+    type: ITEM_TYPE,
+    item: () => ({ nodeId, node }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    canDrag: () => !isEditing,
+  });
+
+  // Drop target
+  const [{ isOver, canDrop }, drop] = useDrop({
+    accept: ITEM_TYPE,
+    drop: (item: { nodeId: string; node: ListNode }, monitor) => {
+      if (!monitor.didDrop() && item.nodeId !== nodeId) {
+        // Move the dragged node to be a child of this node
+        moveNode(item.nodeId, nodeId);
+      }
+    },
+    canDrop: (item: { nodeId: string; node: ListNode }) => {
+      // Can't drop on itself or its own descendants
+      if (item.nodeId === nodeId) return false;
+
+      // Check if target is a descendant of source
+      let current = node;
+      while (current) {
+        if (current.id === item.nodeId) return false;
+        current = current.parentId ? useStore.getState().nodes[current.parentId] : null;
+      }
+
+      // Check depth limit
+      return node.level < 5;
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver({ shallow: true }),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  // Combine drag and drop refs
+  drag(drop(divRef));
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -104,16 +151,28 @@ export const ListItem: React.FC<ListItemProps> = ({
 
   return (
     <div
+      ref={divRef}
+      role="treeitem"
+      aria-level={node.level + 1}
+      aria-expanded={hasChildren ? !node.isCollapsed : undefined}
+      aria-selected={isSelected}
+      aria-label={`${node.title}${node.isPinned ? (rtl ? ', נעוץ' : ', pinned') : ''}${
+        node.isDone ? (rtl ? ', הושלם' : ', completed') : ''
+      }${hasChildren ? ` (${node.childrenIds.length} ${rtl ? 'תתי-פריטים' : 'children'})` : ''}`}
+      tabIndex={0}
       style={{
         marginBottom: '8px',
         opacity: isDragging ? 0.5 : 1,
         transition: 'opacity 0.2s',
+        cursor: isDragging ? 'grabbing' : 'grab',
       }}
       data-node-id={nodeId}
     >
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
+        role="button"
+        aria-describedby={node.description ? `desc-${nodeId}` : undefined}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -123,13 +182,22 @@ export const ListItem: React.FC<ListItemProps> = ({
           background: isSelected
             ? `linear-gradient(135deg, ${levelColor}40, ${levelColor}20)`
             : `${levelColor}15`,
-          border: `2px solid ${isSelected ? levelColor : levelColor + '40'}`,
-          cursor: 'pointer',
+          border: `2px solid ${
+            isOver && canDrop
+              ? '#4ade80'
+              : isSelected
+              ? levelColor
+              : levelColor + '40'
+          }`,
+          cursor: isDragging ? 'grabbing' : 'pointer',
           transition: 'all 0.2s ease',
           direction: rtl ? 'rtl' : 'ltr',
           boxShadow: isSelected
             ? `0 4px 12px ${levelColor}40`
+            : isOver && canDrop
+            ? '0 4px 12px rgba(74, 222, 128, 0.4)'
             : '0 2px 6px rgba(0,0,0,0.1)',
+          transform: isOver && canDrop ? 'scale(1.02)' : 'scale(1)',
         }}
       >
         {/* Collapse button */}
@@ -139,6 +207,16 @@ export const ListItem: React.FC<ListItemProps> = ({
               e.stopPropagation();
               toggleCollapse(nodeId);
             }}
+            aria-label={
+              node.isCollapsed
+                ? rtl
+                  ? `הרחב ${node.title}`
+                  : `Expand ${node.title}`
+                : rtl
+                ? `כווץ ${node.title}`
+                : `Collapse ${node.title}`
+            }
+            aria-expanded={!node.isCollapsed}
             style={{
               background: 'transparent',
               border: 'none',
@@ -155,7 +233,6 @@ export const ListItem: React.FC<ListItemProps> = ({
                 : 'rotate(90deg)',
               transition: 'transform 0.3s ease',
             }}
-            aria-label={node.isCollapsed ? 'הרחב' : 'כווץ'}
           >
             {rtl ? '◀' : '▶'}
           </button>
@@ -170,6 +247,11 @@ export const ListItem: React.FC<ListItemProps> = ({
               e.stopPropagation();
               toggleDone(nodeId);
             }}
+            aria-label={
+              rtl
+                ? `סמן ${node.title} כ${node.isDone ? 'לא הושלם' : 'הושלם'}`
+                : `Mark ${node.title} as ${node.isDone ? 'incomplete' : 'complete'}`
+            }
             style={{
               width: '18px',
               height: '18px',
@@ -244,6 +326,7 @@ export const ListItem: React.FC<ListItemProps> = ({
                 e.stopPropagation();
                 handleAddChild();
               }}
+              aria-label={rtl ? `הוסף תת-פריט ל${node.title}` : `Add child to ${node.title}`}
               title={rtl ? 'הוסף תת-פריט' : 'Add child'}
               style={{
                 background: '#4ade80',
@@ -272,6 +355,7 @@ export const ListItem: React.FC<ListItemProps> = ({
               e.stopPropagation();
               handleDuplicate();
             }}
+            aria-label={rtl ? `שכפל ${node.title}` : `Duplicate ${node.title}`}
             title={rtl ? 'שכפל' : 'Duplicate'}
             style={{
               background: '#3b82f6',
@@ -296,6 +380,7 @@ export const ListItem: React.FC<ListItemProps> = ({
               e.stopPropagation();
               handleDelete();
             }}
+            aria-label={rtl ? `מחק ${node.title}` : `Delete ${node.title}`}
             title={rtl ? 'מחק' : 'Delete'}
             style={{
               background: '#ef4444',
@@ -321,6 +406,8 @@ export const ListItem: React.FC<ListItemProps> = ({
       {/* Children */}
       {hasChildren && !node.isCollapsed && (
         <div
+          role="group"
+          aria-label={rtl ? `תתי-פריטים של ${node.title}` : `Children of ${node.title}`}
           style={{
             [rtl ? 'marginRight' : 'marginLeft']: '24px',
             marginTop: '8px',
@@ -336,6 +423,13 @@ export const ListItem: React.FC<ListItemProps> = ({
               />
             ))}
         </div>
+      )}
+
+      {/* Hidden description for screen readers */}
+      {node.description && (
+        <span id={`desc-${nodeId}`} style={{ display: 'none' }}>
+          {node.description}
+        </span>
       )}
     </div>
   );
