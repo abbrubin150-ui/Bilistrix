@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useToastStore } from '../../store/useToastStore';
 import { VIEW_MODE_LABELS } from '../../constants/config';
@@ -16,6 +16,7 @@ export const Toolbar: React.FC = () => {
   const undo = useStore((state) => state.undo);
   const redo = useStore((state) => state.redo);
   const exportData = useStore((state) => state.exportData);
+  const importData = useStore((state) => state.importData);
   const createSnapshot = useStore((state) => state.createSnapshot);
   const toggleCommandPalette = useStore((state) => state.toggleCommandPalette);
 
@@ -29,6 +30,7 @@ export const Toolbar: React.FC = () => {
   const [showRulesEngine, setShowRulesEngine] = useState(false);
   const [showPluginsManager, setShowPluginsManager] = useState(false);
   const [showThemeSwitcher, setShowThemeSwitcher] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleAddRoot = () => {
     const newNode = createNode(null);
@@ -61,6 +63,34 @@ export const Toolbar: React.FC = () => {
       createSnapshot(name);
       alert(rtl ? 'Snapshot נשמר!' : 'Snapshot saved!');
     }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target?.result as string;
+        if (data) {
+          try {
+            importData(data);
+            addToast(rtl ? 'ייבוא הושלם בהצלחה' : 'Import completed successfully', 'success');
+          } catch (error) {
+            console.error('Import failed:', error);
+            addToast(rtl ? 'ייבוא נכשל' : 'Import failed. Please check the file.', 'error');
+          }
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Allow selecting the same file again
+    event.target.value = '';
   };
 
   return (
@@ -241,6 +271,30 @@ export const Toolbar: React.FC = () => {
       >
         💾 {rtl ? 'ייצוא' : 'Export'}
       </button>
+
+      {/* Import */}
+      <button
+        onClick={handleImportClick}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+          background: 'rgba(255,255,255,0.1)',
+          color: theme.colors.text,
+          fontSize: '14px',
+          cursor: 'pointer',
+        }}
+      >
+        📂 {rtl ? 'ייבוא' : 'Import'}
+      </button>
+
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
 
       {/* Snapshot */}
       <button
