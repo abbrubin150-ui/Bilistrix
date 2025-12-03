@@ -1,11 +1,25 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { Modal } from './Modal';
+import { ToastContainer, ToastMessage } from './Toast';
 
 type PanelView = 'snapshots' | 'templates' | 'sessions' | 'themes';
 
 export const SidePanel: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentView, setCurrentView] = useState<PanelView>('snapshots');
+  const [modalType, setModalType] = useState<
+    | 'createSnapshot'
+    | 'restoreSnapshot'
+    | 'deleteSnapshot'
+    | 'createTemplate'
+    | 'deleteTemplate'
+    | 'createSession'
+    | null
+  >(null);
+  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  const [formState, setFormState] = useState({ name: '', description: '' });
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const snapshots = useStore((state) => Object.values(state.snapshots));
   const templates = useStore((state) => Object.values(state.templates));
@@ -13,6 +27,7 @@ export const SidePanel: React.FC = () => {
   const currentSessionId = useStore((state) => state.currentSession.id);
   const theme = useStore((state) => state.currentSession.theme);
   const rtl = useStore((state) => state.currentSession.rtl);
+  const selectedNodeIds = useStore((state) => state.currentSession.selectedNodeIds);
 
   const createSnapshot = useStore((state) => state.createSnapshot);
   const restoreSnapshot = useStore((state) => state.restoreSnapshot);
@@ -23,6 +38,25 @@ export const SidePanel: React.FC = () => {
   const switchSession = useStore((state) => state.switchSession);
   const createSession = useStore((state) => state.createSession);
 
+  const isTemplateActionDisabled = useMemo(
+    () => selectedNodeIds.length === 0,
+    [selectedNodeIds.length]
+  );
+
+  const resetModal = () => {
+    setModalType(null);
+    setModalTargetId(null);
+    setFormState({ name: '', description: '' });
+  };
+
+  const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
+    setToasts((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, message, type }]);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString(rtl ? 'he-IL' : 'en-US', {
       dateStyle: 'short',
@@ -31,58 +65,256 @@ export const SidePanel: React.FC = () => {
   };
 
   const handleCreateSnapshot = () => {
-    const name = prompt(rtl ? 'שם ה-Snapshot:' : 'Snapshot name:');
-    if (name) {
-      const description = prompt(rtl ? 'תיאור (אופציונלי):' : 'Description (optional):');
-      createSnapshot(name, description || undefined);
-    }
+    setFormState({ name: '', description: '' });
+    setModalType('createSnapshot');
   };
 
   const handleRestoreSnapshot = (id: string) => {
-    if (confirm(rtl ? 'לשחזר Snapshot זה?' : 'Restore this snapshot?')) {
-      restoreSnapshot(id);
-      alert(rtl ? 'Snapshot שוחזר!' : 'Snapshot restored!');
-    }
+    setModalType('restoreSnapshot');
+    setModalTargetId(id);
   };
 
   const handleDeleteSnapshot = (id: string) => {
-    if (confirm(rtl ? 'למחוק Snapshot זה?' : 'Delete this snapshot?')) {
-      deleteSnapshot(id);
-    }
+    setModalType('deleteSnapshot');
+    setModalTargetId(id);
   };
 
   const handleSaveAsTemplate = () => {
-    const selectedNodeIds = useStore.getState().currentSession.selectedNodeIds;
-    if (selectedNodeIds.length === 0) {
-      alert(rtl ? 'אנא בחר פריט לשמור כ-Template' : 'Please select an item to save as template');
+    if (isTemplateActionDisabled) {
+      addToast(rtl ? 'אנא בחר פריט לשמור כתבנית' : 'Select an item to save as a template', 'error');
       return;
     }
 
-    const name = prompt(rtl ? 'שם ה-Template:' : 'Template name:');
-    if (name) {
-      const description = prompt(rtl ? 'תיאור (אופציונלי):' : 'Description (optional):');
-      createTemplate(selectedNodeIds[0], name, description || undefined);
-    }
+    setFormState({ name: '', description: '' });
+    setModalType('createTemplate');
   };
 
   const handleApplyTemplate = (id: string) => {
     applyTemplate(id, null); // Apply to root
-    alert(rtl ? 'Template הוחל!' : 'Template applied!');
+    addToast(rtl ? 'תבנית הוחלה בהצלחה' : 'Template applied successfully', 'success');
   };
 
   const handleDeleteTemplate = (id: string) => {
-    if (confirm(rtl ? 'למחוק Template זה?' : 'Delete this template?')) {
-      deleteTemplate(id);
-    }
+    setModalType('deleteTemplate');
+    setModalTargetId(id);
   };
 
   const handleCreateSession = () => {
-    const name = prompt(rtl ? 'שם ה-Session:' : 'Session name:');
-    if (name) {
-      const description = prompt(rtl ? 'תיאור (אופציונלי):' : 'Description (optional):');
-      createSession(name, description || undefined);
-    }
+    setFormState({ name: '', description: '' });
+    setModalType('createSession');
   };
+
+  const submitForm = () => {
+    if (!formState.name.trim()) {
+      addToast(rtl ? 'שם הוא שדה חובה' : 'Name is required', 'error');
+      return;
+    }
+
+    switch (modalType) {
+      case 'createSnapshot':
+        createSnapshot(formState.name.trim(), formState.description.trim() || undefined);
+        addToast(rtl ? 'Snapshot נשמר בהצלחה' : 'Snapshot saved successfully', 'success');
+        break;
+      case 'createTemplate':
+        if (selectedNodeIds[0]) {
+          createTemplate(selectedNodeIds[0], formState.name.trim(), formState.description.trim() || undefined);
+          addToast(rtl ? 'תבנית נשמרה' : 'Template saved', 'success');
+        } else {
+          addToast(rtl ? 'אין פריט נבחר' : 'No item selected to template', 'error');
+        }
+        break;
+      case 'createSession':
+        createSession(formState.name.trim(), formState.description.trim() || undefined);
+        addToast(rtl ? 'Session נוצר' : 'Session created', 'success');
+        break;
+      default:
+        break;
+    }
+
+    resetModal();
+  };
+
+  const confirmAction = () => {
+    if (!modalTargetId) {
+      resetModal();
+      return;
+    }
+
+    if (modalType === 'restoreSnapshot') {
+      restoreSnapshot(modalTargetId);
+      addToast(rtl ? 'Snapshot שוחזר בהצלחה' : 'Snapshot restored successfully', 'success');
+    }
+
+    if (modalType === 'deleteSnapshot') {
+      deleteSnapshot(modalTargetId);
+      addToast(rtl ? 'Snapshot נמחק' : 'Snapshot deleted', 'success');
+    }
+
+    if (modalType === 'deleteTemplate') {
+      deleteTemplate(modalTargetId);
+      addToast(rtl ? 'Template נמחקה' : 'Template deleted', 'success');
+    }
+
+    resetModal();
+  };
+
+  const isFormModal =
+    modalType === 'createSnapshot' ||
+    modalType === 'createTemplate' ||
+    modalType === 'createSession';
+
+  const modalTitle = (() => {
+    switch (modalType) {
+      case 'createSnapshot':
+        return rtl ? 'צור Snapshot חדש' : 'Create Snapshot';
+      case 'restoreSnapshot':
+        return rtl ? 'לאשר שחזור Snapshot?' : 'Confirm Snapshot Restore';
+      case 'deleteSnapshot':
+        return rtl ? 'למחוק Snapshot?' : 'Delete Snapshot?';
+      case 'createTemplate':
+        return rtl ? 'שמור כתבנית' : 'Save as Template';
+      case 'deleteTemplate':
+        return rtl ? 'למחוק Template?' : 'Delete Template?';
+      case 'createSession':
+        return rtl ? 'צור Session חדש' : 'Create Session';
+      default:
+        return '';
+    }
+  })();
+
+  const modalContent = (() => {
+    if (!modalType) return null;
+
+    if (isFormModal) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ color: theme.colors.text, fontWeight: 600 }}>
+              {rtl ? 'שם (חובה)' : 'Name (required)'}
+            </span>
+            <input
+              value={formState.name}
+              onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder={rtl ? 'הקלד שם...' : 'Enter a name...'}
+              style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.mode === 'dark' ? '#0f172a' : 'white',
+                color: theme.colors.text,
+                fontSize: '14px',
+              }}
+            />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ color: theme.colors.text, fontWeight: 600 }}>
+              {rtl ? 'תיאור (אופציונלי)' : 'Description (optional)'}
+            </span>
+            <textarea
+              value={formState.description}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, description: e.target.value }))
+              }
+              placeholder={rtl ? 'הוסף הקשר...' : 'Add context...'}
+              rows={3}
+              style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.mode === 'dark' ? '#0f172a' : 'white',
+                color: theme.colors.text,
+                fontSize: '14px',
+                resize: 'vertical',
+              }}
+            />
+          </label>
+        </div>
+      );
+    }
+
+    if (modalType === 'restoreSnapshot') {
+      return (
+        <p style={{ margin: 0, color: theme.colors.text, lineHeight: 1.6 }}>
+          {rtl
+            ? 'האם לשחזר את ה-Snapshot הנבחר ולהחליף את העץ הנוכחי?'
+            : 'Restore the selected snapshot and replace the current tree?'}
+        </p>
+      );
+    }
+
+    if (modalType === 'deleteSnapshot') {
+      return (
+        <p style={{ margin: 0, color: theme.colors.text, lineHeight: 1.6 }}>
+          {rtl
+            ? 'האם למחוק לצמיתות את ה-Snapshot?'
+            : 'Permanently delete this snapshot?'}
+        </p>
+      );
+    }
+
+    if (modalType === 'deleteTemplate') {
+      return (
+        <p style={{ margin: 0, color: theme.colors.text, lineHeight: 1.6 }}>
+          {rtl
+            ? 'האם למחוק את התבנית שנשמרה?'
+            : 'Delete this saved template?'}
+        </p>
+      );
+    }
+
+    return null;
+  })();
+
+  const modalFooter = (() => {
+    if (!modalType) return null;
+
+    const primaryLabel = isFormModal
+      ? rtl
+        ? 'שמור'
+        : 'Save'
+      : modalType === 'restoreSnapshot'
+        ? rtl
+          ? 'שחזר'
+          : 'Restore'
+        : rtl
+          ? 'מחק'
+          : 'Delete';
+
+    const primaryAction = isFormModal ? submitForm : confirmAction;
+
+    return (
+      <>
+        <button
+          onClick={resetModal}
+          style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            border: `1px solid ${theme.colors.border}`,
+            background: 'transparent',
+            color: theme.colors.text,
+            cursor: 'pointer',
+          }}
+        >
+          {rtl ? 'ביטול' : 'Cancel'}
+        </button>
+        <button
+          onClick={primaryAction}
+          style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            border: 'none',
+            background: isFormModal ? theme.colors.primary : '#ef4444',
+            color: isFormModal ? '#0b1224' : 'white',
+            cursor: 'pointer',
+            fontWeight: 700,
+          }}
+        >
+          {primaryLabel}
+        </button>
+      </>
+    );
+  })();
 
   if (!isOpen) {
     return (
@@ -111,23 +343,24 @@ export const SidePanel: React.FC = () => {
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        [rtl ? 'left' : 'right']: 0,
-        top: 0,
-        bottom: 0,
-        width: '360px',
-        background: theme.mode === 'dark' ? '#1a1a2e' : '#f5f5f5',
-        borderLeft: rtl ? 'none' : `1px solid ${theme.colors.border}`,
-        borderRight: rtl ? `1px solid ${theme.colors.border}` : 'none',
-        zIndex: 100,
-        display: 'flex',
-        flexDirection: 'column',
-        direction: rtl ? 'rtl' : 'ltr',
-        boxShadow: '-4px 0 12px rgba(0,0,0,0.2)',
-      }}
-    >
+    <>
+      <div
+        style={{
+          position: 'fixed',
+          [rtl ? 'left' : 'right']: 0,
+          top: 0,
+          bottom: 0,
+          width: '360px',
+          background: theme.mode === 'dark' ? '#1a1a2e' : '#f5f5f5',
+          borderLeft: rtl ? 'none' : `1px solid ${theme.colors.border}`,
+          borderRight: rtl ? `1px solid ${theme.colors.border}` : 'none',
+          zIndex: 100,
+          display: 'flex',
+          flexDirection: 'column',
+          direction: rtl ? 'rtl' : 'ltr',
+          boxShadow: '-4px 0 12px rgba(0,0,0,0.2)',
+        }}
+      >
       {/* Header */}
       <div
         style={{
@@ -315,6 +548,7 @@ export const SidePanel: React.FC = () => {
           <div>
             <button
               onClick={handleSaveAsTemplate}
+              disabled={isTemplateActionDisabled}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -325,7 +559,8 @@ export const SidePanel: React.FC = () => {
                 color: theme.colors.primary,
                 fontSize: '14px',
                 fontWeight: '600',
-                cursor: 'pointer',
+                cursor: isTemplateActionDisabled ? 'not-allowed' : 'pointer',
+                opacity: isTemplateActionDisabled ? 0.5 : 1,
               }}
             >
               + {rtl ? 'שמור פריט נבחר כ-Template' : 'Save Selected as Template'}
@@ -544,5 +779,19 @@ export const SidePanel: React.FC = () => {
         )}
       </div>
     </div>
+
+      <Modal
+        isOpen={!!modalType}
+        onClose={resetModal}
+        title={modalTitle}
+        rtl={rtl}
+        theme={theme}
+        footer={modalFooter}
+      >
+        {modalContent}
+      </Modal>
+
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} rtl={rtl} />
+    </>
   );
 };
