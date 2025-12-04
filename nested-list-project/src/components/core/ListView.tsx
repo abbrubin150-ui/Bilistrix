@@ -128,111 +128,104 @@ export const ListView: React.FC = () => {
     ? displayRootIds.filter((id) => filteredNodeIds.has(id))
     : displayRootIds;
 
-  // Render different views based on viewMode
-  const renderView = () => {
-    switch (viewMode) {
-      case 'board':
-        return <BoardView />;
-      case 'tree':
-        return <TreeView />;
-      case 'timeline':
-        return <TimelineView />;
-      case 'minimal':
-        return <MinimalView />;
-      case 'outline':
-      default:
-        return (
-          <div style={{ direction: rtl ? 'rtl' : 'ltr', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+  // Render different views based on viewMode - use direct conditional rendering
+  // to ensure React properly unmounts/mounts components when switching views
+  return (
+    <>
+      {viewMode === 'board' && <BoardView key="board" />}
+      {viewMode === 'tree' && <TreeView key="tree" />}
+      {viewMode === 'timeline' && <TimelineView key="timeline" />}
+      {viewMode === 'minimal' && <MinimalView key="minimal" />}
+      {(viewMode === 'outline' || !viewMode) && (
+        <div key="outline" style={{ direction: rtl ? 'rtl' : 'ltr', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div
+            aria-live="polite"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: `${theme.colors.primary}10`,
+              border: `1px solid ${theme.colors.primary}40`,
+              color: theme.colors.text,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+              <span>📋</span>
+              <span>
+                {rtl ? 'סה"כ פריטים' : 'Total items'}: {totalItems}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>✅</span>
+              <span>
+                {rtl ? 'הושלמו' : 'Completed'}: {completedItems}
+              </span>
+            </div>
+          </div>
+
+          {activeFilters.length > 0 && (
             <div
-              aria-live="polite"
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: '12px',
-                padding: '14px 16px',
-                borderRadius: '12px',
-                background: `${theme.colors.primary}10`,
-                border: `1px solid ${theme.colors.primary}40`,
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: `${theme.colors.primary}08`,
+                border: `1px dashed ${theme.colors.primary}50`,
                 color: theme.colors.text,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
-                <span>📋</span>
-                <span>
-                  {rtl ? 'סה"כ פריטים' : 'Total items'}: {totalItems}
+              {activeFilters.map((filter) => (
+                <span
+                  key={filter}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    background: `${theme.colors.primary}15`,
+                    border: `1px solid ${theme.colors.primary}40`,
+                    fontSize: '13px',
+                  }}
+                >
+                  <span>🎯</span>
+                  <span>{filter}</span>
                 </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>✅</span>
-                <span>
-                  {rtl ? 'הושלמו' : 'Completed'}: {completedItems}
-                </span>
-              </div>
+              ))}
             </div>
+          )}
 
-            {activeFilters.length > 0 && (
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  background: `${theme.colors.primary}08`,
-                  border: `1px dashed ${theme.colors.primary}50`,
-                  color: theme.colors.text,
-                }}
-              >
-                {activeFilters.map((filter) => (
-                  <span
-                    key={filter}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 10px',
-                      borderRadius: '999px',
-                      background: `${theme.colors.primary}15`,
-                      border: `1px solid ${theme.colors.primary}40`,
-                      fontSize: '13px',
-                    }}
-                  >
-                    <span>🎯</span>
-                    <span>{filter}</span>
-                  </span>
-                ))}
-              </div>
-            )}
+          {filteredNodeIds && (
+            <div
+              style={{
+                padding: '12px 16px',
+                marginBottom: '16px',
+                borderRadius: '8px',
+                background: `${theme.colors.primary}20`,
+                border: `1px solid ${theme.colors.primary}`,
+                color: theme.colors.text,
+                fontSize: '14px',
+              }}
+            >
+              🔍 {rtl ? 'מוצגים' : 'Showing'} {filteredNodeIds.size}{' '}
+              {rtl ? 'פריטים' : 'items'}
+            </div>
+          )}
 
-            {filteredNodeIds && (
-              <div
-                style={{
-                  padding: '12px 16px',
-                  marginBottom: '16px',
-                  borderRadius: '8px',
-                  background: `${theme.colors.primary}20`,
-                  border: `1px solid ${theme.colors.primary}`,
-                  color: theme.colors.text,
-                  fontSize: '14px',
-                }}
-              >
-                🔍 {rtl ? 'מוצגים' : 'Showing'} {filteredNodeIds.size}{' '}
-                {rtl ? 'פריטים' : 'items'}
-              </div>
-            )}
-
-            {visibleRootIds.map((nodeId) => (
-              <ListItem
-                key={nodeId}
-                nodeId={nodeId}
-                isSelected={selectedNodeIds.includes(nodeId)}
-                filteredNodeIds={filteredNodeIds}
-              />
-            ))}
-          </div>
-        );
-    }
-  };
-
-  return <>{renderView()}</>;
+          {visibleRootIds.map((nodeId) => (
+            <ListItem
+              key={nodeId}
+              nodeId={nodeId}
+              isSelected={selectedNodeIds.includes(nodeId)}
+              filteredNodeIds={filteredNodeIds}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
 };
