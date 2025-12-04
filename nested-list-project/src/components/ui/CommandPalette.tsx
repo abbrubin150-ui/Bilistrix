@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { ViewMode } from '../../types/core';
 import { VIEW_MODE_LABELS } from '../../constants/config';
@@ -28,7 +28,7 @@ export const CommandPalette: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const commands: Command[] = [
+  const commands: Command[] = useMemo(() => [
     // View modes
     ...Object.entries(VIEW_MODE_LABELS).map(([key, label]) => ({
       id: `view-${key}`,
@@ -118,14 +118,14 @@ export const CommandPalette: React.FC = () => {
       },
       category: rtl ? 'הגדרות' : 'Settings',
     },
-  ];
+  ], [rtl, setViewMode, closeCommandPalette, createNode, collapseAll, expandAll, createSnapshot, exportData, setRTL]);
 
-  const filteredCommands = commands.filter(
+  const filteredCommands = useMemo(() => commands.filter(
     (cmd) =>
       cmd.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cmd.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cmd.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [commands, searchQuery]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
