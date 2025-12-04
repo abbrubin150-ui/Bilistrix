@@ -1,6 +1,5 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
-import { ListNode } from '../../types/core';
 
 /**
  * Tree View - Classic tree structure with branches

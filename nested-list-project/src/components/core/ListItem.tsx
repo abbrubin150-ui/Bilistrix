@@ -8,14 +8,12 @@ const ITEM_TYPE = 'LIST_ITEM';
 interface ListItemProps {
   nodeId: string;
   isSelected?: boolean;
-  isDragging?: boolean;
   filteredNodeIds?: Set<string> | null;
 }
 
 export const ListItem: React.FC<ListItemProps> = ({
   nodeId,
   isSelected = false,
-  isDragging: isDraggingProp = false,
   filteredNodeIds = null,
 }) => {
   const node = useStore((state) => state.nodes[nodeId]);
@@ -60,7 +58,7 @@ export const ListItem: React.FC<ListItemProps> = ({
       if (item.nodeId === nodeId) return false;
 
       // Check if target is a descendant of source
-      let current = node;
+      let current: ListNode | null = node;
       while (current) {
         if (current.id === item.nodeId) return false;
         current = current.parentId ? useStore.getState().nodes[current.parentId] : null;

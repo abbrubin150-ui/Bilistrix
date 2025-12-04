@@ -639,7 +639,7 @@ export const useStore = create<AppState & StoreActions>()(
         draft.currentSession.focusedNodeId = id;
         // Build path for breadcrumb
         const path: string[] = [];
-        let current = node;
+        let current: typeof node | null = node;
         while (current) {
           path.unshift(current.id);
           current = current.parentId ? draft.nodes[current.parentId] : null;

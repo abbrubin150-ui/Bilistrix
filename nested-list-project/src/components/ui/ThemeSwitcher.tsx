@@ -2,9 +2,6 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { SandboxTheme } from '../../types/core';
 import {
-  DEFAULT_DARK_THEME,
-  DEFAULT_LIGHT_THEME,
-  HIGH_CONTRAST_THEME,
   THEMES,
 } from '../../constants/themes';
 

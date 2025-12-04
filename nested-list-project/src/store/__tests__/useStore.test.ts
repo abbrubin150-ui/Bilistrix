@@ -22,8 +22,8 @@ describe('useStore integration', () => {
     it('creates nodes and clears focus/selection when deleting them', () => {
       const { result } = renderHook(() => useStore());
 
-      let root: ListNode;
-      let child: ListNode;
+      let root!: ListNode;
+      let child!: ListNode;
       act(() => {
         root = result.current.createNode(null, { title: 'Root' });
         child = result.current.createNode(root.id, { title: 'Child' });
@@ -50,9 +50,9 @@ describe('useStore integration', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const { result } = renderHook(() => useStore());
 
-      let shallow: ListNode;
-      let deepChainParent: ListNode;
-      let movable: ListNode;
+      let shallow!: ListNode;
+      let deepChainParent!: ListNode;
+      let movable!: ListNode;
       act(() => {
         shallow = result.current.createNode(null, { title: 'Shallow' });
         const a = result.current.createNode(null, { title: 'A' });
@@ -81,8 +81,8 @@ describe('useStore integration', () => {
     it('tracks past and future stacks across actions', () => {
       const { result } = renderHook(() => useStore());
 
-      let root: ListNode;
-      let child: ListNode;
+      let root!: ListNode;
+      let child!: ListNode;
       act(() => {
         root = result.current.createNode(null, { title: 'Root' });
         child = result.current.createNode(root.id, { title: 'Child' });
@@ -125,9 +125,9 @@ describe('useStore integration', () => {
     it('applies templates with nested children and records history', () => {
       const { result } = renderHook(() => useStore());
 
-      let root: ListNode;
-      let child: ListNode;
-      let grandchild: ListNode;
+      let root!: ListNode;
+      let child!: ListNode;
+      let grandchild!: ListNode;
       act(() => {
         root = result.current.createNode(null, { title: 'Template Root' });
         child = result.current.createNode(root.id, { title: 'Child' });
@@ -160,7 +160,7 @@ describe('useStore integration', () => {
     it('restores snapshots and appends to history', () => {
       const { result } = renderHook(() => useStore());
 
-      let node: ListNode;
+      let node!: ListNode;
       act(() => {
         node = result.current.createNode(null, { title: 'Original' });
         result.current.createSnapshot('First', 'Baseline');
@@ -188,7 +188,7 @@ describe('useStore integration', () => {
     it('exports data with expected shape', () => {
       const { result } = renderHook(() => useStore());
 
-      let node: ListNode;
+      let node!: ListNode;
       act(() => {
         node = result.current.createNode(null, { title: 'Exported' });
       });

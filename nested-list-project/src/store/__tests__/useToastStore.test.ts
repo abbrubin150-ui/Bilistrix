@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useToastStore } from '../useToastStore';
 
@@ -43,7 +43,9 @@ describe('useToastStore', () => {
     it('should generate unique IDs for each toast', () => {
       const { result } = renderHook(() => useToastStore());
 
-      let id1: string, id2: string, id3: string;
+      let id1: string = '';
+      let id2: string = '';
+      let id3: string = '';
       act(() => {
         id1 = result.current.addToast('Message 1');
         id2 = result.current.addToast('Message 2');
@@ -90,7 +92,9 @@ describe('useToastStore', () => {
     it('should remove a specific toast by ID', () => {
       const { result } = renderHook(() => useToastStore());
 
-      let id1: string, id2: string, id3: string;
+      let id1: string = '';
+      let id2: string = '';
+      let id3: string = '';
       act(() => {
         id1 = result.current.addToast('First');
         id2 = result.current.addToast('Second');

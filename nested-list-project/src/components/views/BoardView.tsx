@@ -1,13 +1,12 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
-import { ListNode, ListNodeId } from '../../types/core';
+import { ListNode } from '../../types/core';
 
 /**
  * Board View - Kanban-style board with columns per level
  */
 export const BoardView: React.FC = () => {
   const nodes = useStore((state) => state.nodes);
-  const rootNodeIds = useStore((state) => state.rootNodeIds);
   const theme = useStore((state) => state.currentSession.theme);
   const rtl = useStore((state) => state.currentSession.rtl);
   const selectNode = useStore((state) => state.selectNode);

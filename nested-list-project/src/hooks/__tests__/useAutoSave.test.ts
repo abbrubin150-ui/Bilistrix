@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useAutoSave } from '../useAutoSave';
 import { useStore } from '../../store/useStore';
 import { useToastStore } from '../../store/useToastStore';
