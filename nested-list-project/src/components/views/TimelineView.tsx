@@ -41,7 +41,7 @@ export const TimelineView: React.FC = () => {
     });
   };
 
-  const renderNode = (node: ListNode, index: number) => {
+  const renderNode = (node: ListNode) => {
     const isSelected = selectedNodeIds.includes(node.id);
     const levelColor = theme.colors.levelColors[node.level] || theme.colors.primary;
 
@@ -221,7 +221,7 @@ export const TimelineView: React.FC = () => {
             >
               {date}
             </h3>
-            {dateNodes.map((node, index) => renderNode(node, index))}
+            {dateNodes.map((node) => renderNode(node))}
           </div>
         ))
       ) : (

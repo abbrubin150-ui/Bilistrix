@@ -33,7 +33,7 @@ export const Toolbar: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleAddRoot = () => {
-    const newNode = createNode(null);
+    createNode(null);
     // Focus will be handled by ListItem
   };
 

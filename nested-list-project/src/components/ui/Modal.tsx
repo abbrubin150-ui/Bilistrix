@@ -1,12 +1,12 @@
 import React from 'react';
-import { Theme } from '../../types/core';
+import { SandboxTheme } from '../../types/core';
 
 type ModalProps = {
   isOpen: boolean;
   title: string;
   onClose: () => void;
   rtl?: boolean;
-  theme: Theme;
+  theme: SandboxTheme;
   children: React.ReactNode;
   footer?: React.ReactNode;
 };

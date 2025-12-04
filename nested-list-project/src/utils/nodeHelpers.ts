@@ -32,7 +32,7 @@ export const getNodeDepth = (
   let currentId: ListNodeId | null = nodeId;
 
   while (currentId && nodes[currentId]) {
-    const node = nodes[currentId];
+    const node: ListNode = nodes[currentId];
     currentId = node.parentId;
     depth++;
   }
@@ -70,7 +70,7 @@ export const getPath = (
   let currentId: ListNodeId | null = nodeId;
 
   while (currentId && nodes[currentId]) {
-    const node = nodes[currentId];
+    const node: ListNode = nodes[currentId];
     path.unshift(node);
     currentId = node.parentId;
   }

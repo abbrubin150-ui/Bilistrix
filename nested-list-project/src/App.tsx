@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Header } from './components/ui/Header';
 import { Toolbar } from './components/ui/Toolbar';
 import { SearchFilter } from './components/ui/SearchFilter';
