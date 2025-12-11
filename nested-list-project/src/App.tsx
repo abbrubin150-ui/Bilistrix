@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Header } from './components/ui/Header';
 import { Toolbar } from './components/ui/Toolbar';
 import { SearchFilter } from './components/ui/SearchFilter';
@@ -21,6 +21,7 @@ function App() {
   const toasts = useToastStore((state) => state.toasts);
   const dismissToast = useToastStore((state) => state.dismissToast);
   const { isSaving, lastSavedAt, hasPendingChanges } = useAutoSave();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Enable keyboard navigation
   useKeyboardNav();
@@ -44,6 +45,38 @@ function App() {
       );
     }
   }, [addToast, importData, rtl]);
+
+  // File input handler for import
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target?.result as string;
+        if (data) {
+          try {
+            importData(data);
+            addToast(
+              rtl ? 'ייבוא הושלם בהצלחה' : 'Import completed successfully',
+              'success'
+            );
+          } catch (error) {
+            console.error('Import failed:', error);
+            const message =
+              error instanceof Error && error.message
+                ? error.message
+                : rtl
+                ? 'ייבוא נכשל'
+                : 'Import failed. Please check the file.';
+            addToast(message, 'error');
+          }
+        }
+      };
+      reader.readAsText(file);
+    }
+    // Allow selecting the same file again
+    event.target.value = '';
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -81,6 +114,12 @@ function App() {
             'error'
           );
         }
+      }
+
+      // Import
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        fileInputRef.current?.click();
       }
 
       // Focus mode exit
@@ -164,6 +203,15 @@ function App() {
       <SidePanel />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} rtl={rtl} />
 
+      {/* Hidden file input for keyboard shortcut import */}
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+
       {/* Footer */}
       <footer
         style={{
@@ -182,8 +230,8 @@ function App() {
         </div>
         <div>
           {rtl
-            ? '⌨️ קיצורי דרך: Ctrl+K (פקודות) | Ctrl+Z (בטל) | Ctrl+Shift+Z (חזור) | Ctrl+E (ייצוא)'
-            : '⌨️ Shortcuts: Ctrl+K (Commands) | Ctrl+Z (Undo) | Ctrl+Shift+Z (Redo) | Ctrl+E (Export)'}
+            ? '⌨️ קיצורי דרך: Ctrl+K (פקודות) | Ctrl+Z (בטל) | Ctrl+Shift+Z (חזור) | Ctrl+E (ייצוא) | Ctrl+I (ייבוא)'
+            : '⌨️ Shortcuts: Ctrl+K (Commands) | Ctrl+Z (Undo) | Ctrl+Shift+Z (Redo) | Ctrl+E (Export) | Ctrl+I (Import)'}
         </div>
       </footer>
     </div>
